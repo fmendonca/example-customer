@@ -1,0 +1,8 @@
+---
+- name: "Aprovisionando ambiente"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  roles:
+    - vm_deploy

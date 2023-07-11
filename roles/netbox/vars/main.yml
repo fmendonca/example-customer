@@ -1,0 +1,5 @@
+---
+netbox_url: http://192.168.86.24:8000
+netbox_token: c4c5e873a1cc4cbba44f64f44e4eda712fe80544
+vlan_name: vm86
+hostname_name: teste-bla.lala

@@ -1,0 +1,67 @@
+---
+  - name: Get VLAN details from Netbox
+    uri:
+      url: "{{ netbox_url }}/api/ipam/vlans/?name={{ vlan_name }}"
+      method: GET
+      headers:
+        Authorization: "Token {{ netbox_token }}"
+        Accept: "application/json"
+      return_content: true
+    register: vlan_info
+
+  - name: Get VLAN ID from VLAN details
+    set_fact:
+      vlan_id: "{{ vlan_info.json.results[0].id }}"
+    when: vlan_info.json.count > 0
+
+  - name: Get prefixes associated with VLAN
+    uri:
+      url: "{{ netbox_url }}/api/ipam/prefixes/?vlan_id={{ vlan_id }}"
+      method: GET
+      headers:
+        Authorization: "Token {{ netbox_token }}"
+        Accept: "application/json"
+      return_content: true
+    register: vlan_prefixes
+    when: vlan_id is defined
+  
+  - name: Get first prefix from prefix list
+    set_fact:
+      vlan_prefix: "{{ vlan_prefixes.json.results[0].id }}"
+    when: vlan_prefixes.json.count > 0
+  
+  - name: Print prefix
+    debug:
+      var: vlan_prefix
+    when: vlan_prefix is defined
+  
+  - name: Get free IP from VLAN prefix
+    uri:
+      url: "{{ netbox_url }}/api/ipam/prefixes/{{ vlan_prefix | urlencode }}/available-ips/"
+      method: POST
+      headers:
+        Authorization: "Token {{ netbox_token }}"
+        Accept: "application/json"
+      status_code: 201
+    register: free_ip
+    when: vlan_prefix is defined
+  
+  - name: Register new IP address with hostname
+    uri:
+      url: "{{ netbox_url }}/api/ipam/ip-addresses/{{ free_ip.json.id }}/"
+      method: PATCH
+      headers:
+        Authorization: "Token {{ netbox_token }}"
+        Accept: "application/json"
+      body_format: json
+      body:
+        dns_name: "{{ hostname_name }}"
+      status_code: 200
+      validate_certs: false
+    register: new_ip_address
+    when: free_ip is defined
+  
+  - name: Print new IP address details
+    debug:
+      var: new_ip_address.json
+    when: new_ip_address is defined
