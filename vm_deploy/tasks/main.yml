@@ -1,0 +1,56 @@
+---
+  - name: Deploy VM from a template and configure IP
+    hosts: localhost
+    gather_facts: false
+    tasks:
+      - name: Obtain the next available IP from NetBox
+        netbox.netbox.netbox_ip_address:
+          netbox_url: "{{ netbox_url }}"
+          netbox_token: "{{ netbox_token }}"
+          data:
+            vrf: "{{ vrf_name }}"
+            prefix: "{{ prefix }}"
+            status: "Active"
+          state: new
+        register: ip_address_info
+
+      - name: Create a VM from a template
+        vmware_guest:
+          hostname: "{{ vcenter_hostname }}"
+          username: "{{ vcenter_username }}"
+          password: "{{ vcenter_password }}"
+          validate_certs: false
+          folder: "/{{ datacenter_name }}/vm/{{ vm_folder }}"
+          name: "{{ vm_name }}"
+          state: poweredon
+          template: "{{ vm_template }}"
+          datacenter: "{{ datacenter_name }}"
+          datastore: "{{ vm_datastore }}"
+          hardware:
+            memory_mb: "{{ vm_memory_mb }}"
+            num_cpus: "{{ vm_num_cpus }}"
+            scsi: paravirtual
+          disk:
+          - size_gb: "{{ vm_disk_size_gb }}"
+            type: thin
+            datastore: "{{ vm_datastore }}"
+          networks:
+          - name: "{{ vm_network }}"
+            device_type: vmxnet3
+            ip: "{{ ip_address_info.ip_address_data.address.split('/')[0] }}"
+            netmask: "{{ vm_netmask }}"
+            gateway: "{{ vm_gateway }}"
+            domain: "{{ vm_domain }}"
+            dns_servers: "{{ vm_dns_servers }}"
+          wait_for_ip_address: true
+        register: new_vm
+
+      - name: Register the IP back to NetBox
+        netbox.netbox.netbox_ip_address:
+          netbox_url: "{{ netbox_url }}"
+          netbox_token: "{{ netbox_token }}"
+          data:
+            address: "{{ ip_address_info.ip_address_data.address }}"
+            vrf: "{{ vrf_name }}"
+            status: "Active"
+          state: present
