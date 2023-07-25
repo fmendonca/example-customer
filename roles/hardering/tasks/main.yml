@@ -1,0 +1,27 @@
+---
+# tasks file for hardering
+- name: Register Machine on Satellite
+  community.general.redhat_subscription:
+    state: present
+    org_id: "{{ org_id }}"
+    activationkey: "{{ activationkey }}"
+    force_register: true
+    pool: "{{ pool }}"
+    username: "{{ username }}"
+    password: "{{ password }}"
+
+- name: Enable Repository
+  community.general.rhsm_repository:
+    name: "{{ repos }}"
+    state: enabled
+
+- name: Update rhel
+  ansible.builtin.package:
+    name: '*'
+    state: latest
+
+- name: Install list of packages
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: installed
+  loop: "{{ packages | flatten(levels=1) }}"

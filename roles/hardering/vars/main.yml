@@ -1,0 +1,11 @@
+---
+# vars file for hardering
+activationkey:
+org_id:
+pool:
+username:
+password:
+packages:
+  -
+  -
+  -

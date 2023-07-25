@@ -1,0 +1,28 @@
+---
+# handlers file for join_domain
+- name: Enable service sssd at boot
+  ansible.builtin.service:
+    name: sssd
+    enabled: true
+    state: started
+
+- name: Restart sssd service
+  ansible.builtin.service:
+    name: sssd
+    state: restarted
+
+- name: Restart sshd service
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+
+- name: Enable service chronyd
+  ansible.builtin.service:
+    name: chronyd
+    enabled: true
+    state: started
+
+- name: Restart chrony
+  ansible.builtin.service:
+    name: chronyd
+    state: restarted

@@ -1,0 +1,26 @@
+---
+# vars file for join_domain
+pkgs:
+  - realmd
+  - sssd
+  - sssd-tools
+  - oddjob
+  - oddjob-mkhomedir
+  - adcli
+  - samba-common
+  - PackageKit
+  - python3-pexpect
+  - chrony
+#
+domain_admin_user_short: "administrator"
+domain_admin_password: "123Redhat@"
+dns_domain_name: "contoso.local"
+domain_ou_path: "OU=computers,OU=infra,DC=domain,DC=local"
+domain_admin_user_group: "linuxUsers"
+domain_member_allow_userlogin_without_fqdn: true
+domain_member_allow_ssh_password_auth_for_users: true
+#
+chrony_service_name: chronyd
+chrony_config_location: /etc/chrony.conf
+chrony_config_driftfile: /var/lib/chrony/drift
+chrony_config_keyfile: /etc/chrony.keys

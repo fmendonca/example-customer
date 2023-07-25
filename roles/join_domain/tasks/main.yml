@@ -1,0 +1,79 @@
+---
+- name: Installing Required packages on RHEL
+  ansible.builtin.package:
+    name: "{{ pkgs }}"
+    state: present
+  notify:
+    - Enable service chronyd
+
+- name: Copy the chrony.conf template file
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: "{{ chrony_config_location }}"
+  notify:
+    - Restart chrony
+
+- name: Checking Domain Join status
+  ansible.builtin.shell: /bin/bash -c "/usr/sbin/realm discover {{ dns_domain_name }} | grep configured"
+  register: ad_status
+  changed_when: false
+  ignore_errors: true
+
+- name: Join linux into domain into specific OU
+  ansible.builtin.expect:
+    command: /bin/bash -c "/usr/sbin/realm join {{ dns_domain_name }} --user={{ domain_admin_user_short }} --computer-ou={{ domain_ou_path }}"
+    responses:
+      Password.*: "{{ domain_admin_password }}"
+  when:
+    - ad_status.stdout is search("configured.*no*")
+    - domain_ou_path is defined
+
+- name: Join linux into domain into default Computer OU
+  ansible.builtin.expect:
+    command: /bin/bash -c "/usr/sbin/realm join {{ dns_domain_name }} --user={{ domain_admin_user_short }}"
+    responses:
+      Password.*: "{{ domain_admin_password }}"
+  when:
+    - ad_status.stdout is search("configured.*no*")
+    - domain_ou_path is undefined
+
+- name: Allow User Login without FQDN
+  ansible.builtin.lineinfile:
+    backup: true
+    state: present
+    dest: /etc/sssd/sssd.conf
+    regexp: '^{{ item.search }}'
+    line: '{{ item.replace }}'
+  loop:
+    - { search: 'use_fully_qualified_names', replace: 'use_fully_qualified_names = False' }
+    - { search: 'fallback_homedir', replace: 'fallback_homedir = /home/%u' }
+  when: domain_member_allow_userlogin_without_fqdn
+  notify:
+    - Restart sssd service
+
+- name: Allow SSH password auth for all users except root
+  ansible.builtin.lineinfile:
+    backup: true
+    state: present
+    dest: /etc/ssh/sshd_config
+    regexp: '^{{ item.search }}'
+    line: '{{ item.replace }}'
+  loop:
+    - { search: 'PasswordAuthentication', replace: 'PasswordAuthentication yes' }
+  when: domain_member_allow_ssh_password_auth_for_users
+
+- name: Update pam.d common-session to autocreate home-dir
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-session
+    state: present
+    regexp: '^session optional pam_mkhomedir.so skel=/etc/skel umask=077'
+    line: 'session optional pam_mkhomedir.so skel=/etc/skel umask=077'
+
+- name: "Updating sudors for Domain Admins users"
+  ansible.builtin.template:
+    src: templates/sudoers.j2
+    dest: /etc/sudoers.d/domain-admins
+    owner: root
+    group: root
+    mode: '440'
+  when: domain_admin_user_group is defined
