@@ -1,9 +1,10 @@
 ---
 - name: "Aprovisionando ambiente"
-  hosts: localhost
-  connection: local
-  gather_facts: false
+  hosts: all
+  #connection: local
+  gather_facts: true
 
   roles:
-    - netbox
-    - vmware_vm
+#    - netbox
+#    - vmware_vm
+    - join_domain
