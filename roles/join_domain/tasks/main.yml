@@ -37,7 +37,7 @@
     - ad_status.stdout is search("configured.*no*")
     - domain_ou_path is undefined
 
-- name: Allow User Login without FQDN
+- name: Adjust sssd parameters
   ansible.builtin.lineinfile:
     backup: true
     state: present
@@ -46,6 +46,7 @@
     line: '{{ item.replace }}'
   loop:
     - { search: 'use_fully_qualified_names', replace: 'use_fully_qualified_names = False' }
+    - { search: 'ldap_id_mapping', replace: 'ldap_id_mapping = False' }
     - { search: 'fallback_homedir', replace: 'fallback_homedir = /home/%u' }
   when: domain_member_allow_userlogin_without_fqdn
   notify:
@@ -61,6 +62,8 @@
   loop:
     - { search: 'PasswordAuthentication', replace: 'PasswordAuthentication yes' }
   when: domain_member_allow_ssh_password_auth_for_users
+  notify:
+    - Restart sshd service
 
 - name: Update pam.d common-session to autocreate home-dir
   ansible.builtin.lineinfile:
